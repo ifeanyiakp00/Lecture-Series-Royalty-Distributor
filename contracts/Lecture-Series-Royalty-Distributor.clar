@@ -93,6 +93,21 @@
 (define-read-only (has-recipient (series uint) (recipient principal))
   (is-some (map-get? series-recipient-shares {series: series, recipient: recipient})))
 
+(define-public (update-recipient-shares (series uint) (recipient principal) (new-shares uint))
+  (if (and (series-exists series)
+           (is-admin series tx-sender)
+           (is-open series)
+           (> new-shares u0))
+      (match (map-get? series-recipient-shares {series: series, recipient: recipient})
+        old-shares
+          (let ((total (get-total-shares series))
+                (updated-total (+ (- total old-shares) new-shares)))
+            (map-set series-recipient-shares {series: series, recipient: recipient} new-shares)
+            (map-set series-total-shares series updated-total)
+            (ok true))
+        (err err-series-not-found))
+      (err err-unauthorized)))
+
 (define-read-only (can-distribute (series uint))
   (let ((open (is-open series)) (total (get-total-shares series)))
     (and open (> total u0))))
